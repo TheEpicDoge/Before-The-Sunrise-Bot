@@ -1,0 +1,25 @@
+{
+  "name": "before-the-sunrise-bot",
+  "version": "1.6.0",
+  "description": "Get stats from our roblox game, Before The Sunrise!",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index"
+  },
+  "keywords": [
+      "discord",
+      "discord-bot",
+      "roblox"
+  ],
+  "author": "TheEpicDoge",
+  "license": "MIT",
+  "dependencies": {
+    "@discordjs/rest": "^2.2.0",
+    "axios": "^1.6.8",
+    "crypto": "^1.0.1",
+    "discord.js": "^14.14.1",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "fs": "^0.0.1-security"
+  }
+}
