@@ -1,5 +1,5 @@
 # Before The Sunrise Discord Bot
-Welcome to the open-source respiratory for the Before The Sunrise bot!
+Welcome to the open-source repository for the Before The Sunrise bot!
 
 ## Features:
 - Get player stats with `/getstats`
