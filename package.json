@@ -1,6 +1,6 @@
 {
   "name": "before-the-sunrise-bot",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "description": "Get stats from our roblox game, Before The Sunrise!",
   "main": "index.js",
   "scripts": {
