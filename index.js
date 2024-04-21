@@ -1,6 +1,7 @@
 // Requirements and Variables
 require("dotenv").config();
 const keepAlive = require(`./server`);
+const io = require("@pm2/io")
 const {
   Client,
   Collection,
@@ -30,6 +31,8 @@ client.cooldowns = new Collection();
 // Ready Event
 client.once("ready", async () => {
   console.log(`Bot is now online! | ${Date.now()}`);
+  
+  client.user.setStatus('idle');
   client.user.setActivity(``, { type: null });
 
   console.log(`Creating global commands...`);
@@ -81,6 +84,8 @@ client.once("ready", async () => {
   console.log("Starting tasks");
   console.log("Successfully started tasks!");
 
+  client.user.setStatus('online');
+
   console.log(`Bot is ready! | ${Date.now()}`);
 });
 
@@ -104,7 +109,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
       const joinButton = new ButtonBuilder()
         .setLabel("Join The Server")
-        .setURL("https://discord.gg")
+        .setURL(`https://discord.gg/${process.env.DISCORD_INVITE_CODE}`)
         .setStyle(ButtonStyle.Link);
 
       const row = new ActionRowBuilder().addComponents(joinButton);
@@ -181,6 +186,12 @@ client.on(Events.InteractionCreate, async (interaction) => {
       `Executing command: ${interaction.commandName}\nArguments: ${arguments}\nUser: ${interaction.user.tag} (${interaction.user.id})`,
     );
 
+    const commandRuns = io.counter({
+      name: `${interaction.commandName} Runs`
+    });
+
+    commandRuns.inc();
+
     await command.execute(client, interaction);
   } catch (error) {
     console.error(error);
@@ -203,6 +214,10 @@ client.on(Events.InteractionCreate, async (interaction) => {
     }
   }
 });
+
+process.on('SIGINT', function() {
+  client.user.setStatus('idle');
+})
 
 // Bot Login
 client.login(process.env.BOT_TOKEN);
