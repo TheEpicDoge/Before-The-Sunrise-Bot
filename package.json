@@ -7,9 +7,9 @@
     "start": "node index"
   },
   "keywords": [
-      "discord",
-      "discord-bot",
-      "roblox"
+    "discord",
+    "discord-bot",
+    "roblox"
   ],
   "author": "TheEpicDoge",
   "license": "MIT",
@@ -20,6 +20,7 @@
     "discord.js": "^14.14.1",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
-    "fs": "^0.0.1-security"
+    "fs": "^0.0.1-security",
+    "pm2": "^5.3.1"
   }
 }
