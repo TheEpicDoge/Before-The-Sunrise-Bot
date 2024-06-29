@@ -30,22 +30,22 @@ client.cooldowns = new Collection();
 
 // Ready Event
 client.once("ready", async () => {
-  console.log(`Bot is now online! | ${Date.now()}`);
-  
-  client.user.setStatus('idle');
-  client.user.setActivity(``, { type: null });
-
-  console.log(`Creating global commands...`);
-  const getShopCommand = require("./commands/utility/getshop.js");
-  const getStatsCommand = require("./commands/utility/getstats.js");
-  const pingCommand = require("./commands/utility/ping.js");
-  const commands = [getShopCommand, getStatsCommand, pingCommand];
-  const data = commands.map((command) => ({
-    ...command.data,
-    integration_types: [0, 1],
-    contexts: [0, 1, 2],
-  }));
   try {
+    console.log(`Bot is now online! | ${Date.now()}`);
+    console.log(client)
+    client.user.setStatus('idle');
+    client.user.setActivity(``, { type: null });
+
+    console.log(`Creating global commands...`);
+    const getShopCommand = require("./commands/utility/getshop.js");
+    const getStatsCommand = require("./commands/utility/getstats.js");
+    const pingCommand = require("./commands/utility/ping.js");
+    const commands = [getShopCommand, getStatsCommand, pingCommand];
+    const data = commands.map((command) => ({
+      ...command.data,
+      integration_types: [0, 1],
+      contexts: [0, 1, 2],
+    }));
     console.log("Started refreshing application commands.");
     await rest.put(Routes.applicationCommands(clientId), { body: data });
     commands.forEach((command) => {
@@ -53,13 +53,9 @@ client.once("ready", async () => {
       console.log(`Registered command: ${command.data.name}`);
     });
     console.log("Successfully reloaded application commands!");
-  } catch (error) {
-    console.error(error);
-  }
-  const devControlsCommand = require("./commands/dev/devcontrols.js");
-  const bansCommand = require("./commands/dev/bans.js");
-  const playerDataCommand = require("./commands/dev/playerdata.js");
-  try {
+    const devControlsCommand = require("./commands/dev/devcontrols.js");
+    const bansCommand = require("./commands/dev/bans.js");
+    const playerDataCommand = require("./commands/dev/playerdata.js");
     console.log(`Started refreshing dev commands for guild: ${mainGuildId}.`);
     await rest.put(Routes.applicationGuildCommands(clientId, mainGuildId), {
       body: [
@@ -77,9 +73,7 @@ client.once("ready", async () => {
     console.log(
       `Successfully reloaded dev commands for guild: ${mainGuildId}!`,
     );
-  } catch (error) {
-    console.error(error);
-  }
+
 
   console.log("Starting tasks");
   console.log("Successfully started tasks!");
@@ -87,6 +81,9 @@ client.once("ready", async () => {
   client.user.setStatus('online');
 
   console.log(`Bot is ready! | ${Date.now()}`);
+  } catch (error) {
+    console.error(error);
+  }
 });
 
 client.on(Events.InteractionCreate, async (interaction) => {
