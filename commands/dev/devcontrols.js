@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require("@discordjs/builders");
-const { EmbedBuilder } = require("discord.js");
+const { MessageEmbed } = require("discord.js");
 const axios = require("axios");
 
 const devControlsCommand = new SlashCommandBuilder()
@@ -65,40 +65,8 @@ const devControlsCommand = new SlashCommandBuilder()
         option
           .setName("username")
           .setDescription(
-            'Uesrname of a player in the server to run the command on (use "-1" for all servers)',
+            'Username of a player in the server to run the command on (use "-1" for all servers)',
           )
-          .setRequired(true),
-      ),
-  )
-  .addSubcommand((subcommand) =>
-    subcommand
-      .setName("setplayervalue")
-      .setDescription(
-        "Sets a playerValue to the specified value (user must be currently in-game)",
-      )
-      .addStringOption((option) =>
-        option
-          .setName("username")
-          .setDescription("Username of the player run the command on")
-          .setRequired(true),
-      )
-      .addStringOption((option) =>
-        option
-          .setName("valuename")
-          .setDescription("Name of the value to change")
-          .setRequired(true)
-          .addChoices(
-            { name: "Dabloons", value: "Dabloons" },
-            { name: "Fuel Tanks", value: "FuelTanks" },
-            { name: "Keys", value: "Keys" },
-            { name: "Nights Survived", value: "NightsSurvived" },
-            { name: "XP", value: "XP" },
-          ),
-      )
-      .addIntegerOption((option) =>
-        option
-          .setName("amount")
-          .setDescription("Amount to set the value to")
           .setRequired(true),
       ),
   )
@@ -169,6 +137,32 @@ const devControlsCommand = new SlashCommandBuilder()
   )
   .addSubcommand((subcommand) =>
     subcommand
+      .setName("givespraybottle")
+      .setDescription(
+        "Gives the player the Spray Bottle item (user must be currently in-game)",
+      )
+      .addStringOption((option) =>
+        option
+          .setName("username")
+          .setDescription("Username of the player run the command on")
+          .setRequired(true),
+      ),
+  )
+  .addSubcommand((subcommand) =>
+    subcommand
+      .setName("givehandheldradio")
+      .setDescription(
+        "Gives the player the Handheld Radio item (user must be currently in-game)",
+      )
+      .addStringOption((option) =>
+        option
+          .setName("username")
+          .setDescription("Username of the player run the command on")
+          .setRequired(true),
+      ),
+  )
+  .addSubcommand((subcommand) =>
+    subcommand
       .setName("showmap")
       .setDescription("Shows the debug map for the player")
       .addStringOption((option) =>
@@ -193,161 +187,64 @@ const devControlsCommand = new SlashCommandBuilder()
 module.exports = {
   cooldown: 5,
   requiredRoles: [
-    "1224896193339854958",
+    "1224896193339854958", // Replace with actual role IDs
   ],
   data: devControlsCommand,
   async execute(client, interaction) {
-    // Acknowledge the interaction
     await interaction.deferReply();
 
-    const devControlsApiKey = process.env["ROBLOX_DEVCONTROLS_KEY"];
-    const experienceId = process.env["ROBLOX_UNIVERSE_ID"];
+    const devControlsApiKey = process.env.ROBLOX_DEVCONTROLS_KEY;
+    const experienceId = process.env.ROBLOX_UNIVERSE_ID;
 
-    const logChannelId = process.env["LOG_CHANNEL_ID"];
+    const topicMapping = {
+      updategame: "UpdateGame",
+      resetserver: "ResetServer",
+      kickplayer: "KickPlayer",
+      setday: "SetDay",
+      setnight: "SetNight",
+      giveflare: "GiveFlare",
+      givebananapeel: "GiveBananaPeel",
+      givestrongflashlight: "GiveStrongFlashlight",
+      giveproteinshake: "GiveProteinShake",
+      givemedkit: "GiveMedKit",
+      givespraybottle: "GiveSprayBottle",
+      givehandheldradio: "GiveHandheldRadio",
+      showmap: "ShowMap",
+      hidemap: "HideMap",
+    };
 
-    let topic = "";
-    let message = [];
-    let successMessage = "";
-    if (interaction.options.getSubcommand() === "updategame") {
-      topic = "UpdateGame";
-      message = ["-1"];
-      successMessage = `Updated the game`;
-    }
-    if (interaction.options.getSubcommand() === "resetserver") {
-      topic = "ResetServer";
-      message = [
-        interaction.options.getString("serverid"),
-        interaction.options.getString("reason"),
-      ];
-      successMessage = `Kicked everyone from ${interaction.options.getString(
-        "serverid",
-      )}`;
-    }
-    if (interaction.options.getSubcommand() === "kickplayer") {
-      topic = "KickPlayer";
-      message = [
-        interaction.options.getString("username"),
-        interaction.options.getString("reason"),
-      ];
-      successMessage = `Kicked ${interaction.options.getString(
-        "username",
-      )} from the server`;
-    }
-    if (interaction.options.getSubcommand() === "setday") {
-      topic = "SetDay";
-      message = [interaction.options.getString("username")];
-      successMessage = `Set time to day in the server with ${interaction.options.getString(
-        "username",
-      )}`;
-    }
-    if (interaction.options.getSubcommand() === "setnight") {
-      topic = "SetNight";
-      message = [interaction.options.getString("username")];
-      successMessage = `Set time to night in the server with ${interaction.options.getString(
-        "username",
-      )}`;
-    }
-    if (interaction.options.getSubcommand() === "setplayervalue") {
-      topic = "SetPlayerValue";
-      message = [
-        interaction.options.getString("username"),
-        interaction.options.getString("valuename"),
-        interaction.options.getInteger("amount"),
-      ];
-      successMessage = `Set playerValue "${interaction.options.getString(
-        "valuename",
-      )}" for ${interaction.options.getString(
-        "username",
-      )} to ${interaction.options.getInteger("amount")}`;
-    }
-    if (interaction.options.getSubcommand() === "giveflare") {
-      topic = "GiveFlare";
-      message = [interaction.options.getString("username")];
-      successMessage = `Gave ${interaction.options.getString(
-        "username",
-      )} the Flare item`;
-    }
-    if (interaction.options.getSubcommand() === "givebananapeel") {
-      topic = "GiveBananaPeel";
-      message = [interaction.options.getString("username")];
-      successMessage = `Gave ${interaction.options.getString(
-        "username",
-      )} the Banana Peel item`;
-    }
-    if (interaction.options.getSubcommand() === "givestrongflashlight") {
-      topic = "GiveStrongFlashlight";
-      message = [interaction.options.getString("username")];
-      successMessage = `Gave ${interaction.options.getString(
-        "username",
-      )} the Strong Flashlight item`;
-    }
-    if (interaction.options.getSubcommand() === "giveproteinshake") {
-      topic = "GiveProteinShake";
-      message = [interaction.options.getString("username")];
-      successMessage = `Gave ${interaction.options.getString(
-        "username",
-      )} the Protein Shake item`;
-    }
-    if (interaction.options.getSubcommand() === "givemedkit") {
-      topic = "GiveMedKit";
-      message = [interaction.options.getString("username")];
-      successMessage = `Gave ${interaction.options.getString(
-        "username",
-      )} the Med Kit item`;
-    }
-    if (interaction.options.getSubcommand() === "showmap") {
-      topic = "ShowMap";
-      message = [interaction.options.getString("username")];
-      successMessage = `Enabled the debug map for ${interaction.options.getString(
-        "username",
-      )}`;
-    }
-    if (interaction.options.getSubcommand() === "hidemap") {
-      topic = "HideMap";
-      message = [interaction.options.getString("username")];
-      successMessage = `Disabled the debug map for ${interaction.options.getString(
-        "username",
-      )}`;
-    }
-
-    const messageString = JSON.stringify(message);
+    const subcommand = interaction.options.getSubcommand();
+    const topic = topicMapping[subcommand];
+    const message = {
+      Data: JSON.stringify(interaction.options),
+    };
 
     try {
-      response = await axios.post(
+      await axios.post(
         `https://apis.roblox.com/messaging-service/v1/universes/${experienceId}/topics/${topic}`,
-        {
-          message: messageString,
-        },
+        message,
         {
           headers: {
-            "x-api-key": `${devControlsApiKey}`,
+            "x-api-key": devControlsApiKey,
           },
-        },
+        }
       );
-      devControlsEmbed = new EmbedBuilder()
-        .setColor(0x55ff00)
+
+      const embed = new MessageEmbed()
+        .setColor("#55ff00")
         .setTitle("Success")
-        .setDescription(successMessage);
+        .setDescription(`Command "${subcommand}" successfully executed.`);
+      
+      await interaction.editReply({ embeds: [embed] });
     } catch (error) {
-      console.log(error);
-      devControlsEmbed = new EmbedBuilder()
-        .setColor(0x55ff00)
+      console.error("Error executing command:", error);
+      
+      const embed = new MessageEmbed()
+        .setColor("#ff0000")
         .setTitle("Error")
-        .setDescription("`Status error: " + error.response.status + "`");
+        .setDescription("An error occurred while executing the command.");
+      
+      await interaction.editReply({ embeds: [embed] });
     }
-
-    if (interaction.options.getSubcommand() === "updategame") {
-      const timeLeft = Math.floor(Date.now() / 1000) + 15;
-
-      devControlsEmbed = new EmbedBuilder()
-        .setColor(0x55ff00)
-        .setTitle("Success")
-        .setDescription(`Updating game <t:${timeLeft}:R>`);
-    }
-
-    // Send the response
-    await interaction.editReply({ embeds: [devControlsEmbed] });
-
-    console.log(`Success! "devcontrols" command request completed.`);
   },
 };
