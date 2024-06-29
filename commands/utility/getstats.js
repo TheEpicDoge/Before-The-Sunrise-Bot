@@ -42,15 +42,15 @@ module.exports = {
     const settingsApiKey = process.env["ROBLOX_PLAYERSETTINGS_KEY"];
     const experienceId = process.env["ROBLOX_UNIVERSE_ID"];
 
-    username = [interaction.options.getString("username")];
+    username = interaction.options.getString("username");
 
     try {
       console.log(`Getting player info`);
 
-      response = await axios.post(
+      const response = await axios.post(
         "https://users.roblox.com/v1/usernames/users",
         {
-          usernames: username,
+          usernames: [username],
           excludeBannedUsers: true,
         },
         {
@@ -59,152 +59,165 @@ module.exports = {
           },
         },
       );
-      userId = response.data.data[0].id;
-      displayName = response.data.data[0].displayName;
 
-      if (userId === null) {
-        statsEmbed = new EmbedBuilder()
+      if (response.data.data.length === 0) {
+        const statsEmbed = new EmbedBuilder()
           .setColor(0xff0000)
           .setTitle("Error")
           .setDescription("<:Error:1225166842255904888> Player could not be found");
-        playerData = `error`;
-      } else {
-        console.log(`Roblox User ID: ` + userId);
+        await interaction.editReply({ embeds: [statsEmbed] });
+        console.log(`Player not found`);
+        return;
       }
+
+      userId = response.data.data[0].id;
+      displayName = response.data.data[0].displayName;
+
+      console.log(`Roblox User ID: ` + userId);
     } catch (error) {
       console.error(error);
-      statsEmbed = new EmbedBuilder()
+      const statsEmbed = new EmbedBuilder()
         .setColor(0xff0000)
         .setTitle("Error")
         .setDescription("<:Error:1225166842255904888> `Status error: " + error.response.status + "`");
-      playerData = `error`;
+      await interaction.editReply({ embeds: [statsEmbed] });
+      console.log(`Error getting player info`);
+      return;
     }
 
-    if (playerData !== `error`) {
-      try {
-        console.log(`Retreving player thumbnail`);
-        response = await axios.get(
-          `https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${userId}&size=150x150&format=png`,
-        );
-        imageUrl = response.data.data[0].imageUrl;
-      } catch (error) {
-        console.error(error);
-      }
+    try {
+      console.log(`Retrieving player thumbnail`);
 
-      try {
-        console.log(`Getting playerData`);
+      const response = await axios.get(
+        `https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${userId}&size=150x150&format=png`,
+      );
 
-        headers = {
-          "x-api-key": `${playerDataApiKey}`,
-        };
+      imageUrl = response.data.data[0].imageUrl;
+    } catch (error) {
+      console.error(error);
+    }
 
-        params = {
-          datastoreName: "PlayerData",
-          entryKey: userId,
-        };
-        response = await axios.get(
-          `https://apis.roblox.com/datastores/v1/universes/${experienceId}/standard-datastores/datastore/entries/entry`,
-          { headers, params },
-        );
-        playerData = response.data;
+    try {
+      console.log(`Getting playerData`);
 
-        headers = {
-          "x-api-key": `${settingsApiKey}`,
-        };
+      let headers = {
+        "x-api-key": `${playerDataApiKey}`,
+      };
 
-        params = {
-          datastoreName: "PlayerSettingsData",
-          entryKey: userId,
-        };
+      let params = {
+        datastoreName: "PlayerData",
+        entryKey: userId,
+      };
 
-        response = await axios.get(
-          `https://apis.roblox.com/datastores/v1/universes/${experienceId}/standard-datastores/datastore/entries/entry`,
-          { headers, params },
-        );
+      let response = await axios.get(
+        `https://apis.roblox.com/datastores/v1/universes/${experienceId}/standard-datastores/datastore/entries/entry`,
+        { headers, params },
+      );
 
-        if (response.data.VisibleProfile === false) {
-          statsEmbed = new EmbedBuilder()
-            .setColor(0xff0000)
-            .setTitle("Error")
-            .setDescription(
-              "<:Error:1225166842255904888> Either this player has not played the game yet, or they have requested to keep their profile hidden",
-            );
-          playerData = `hidden`;
-        }
-      } catch (error) {
-        console.error(error);
-        if (error.response.status === 404) {
-          statsEmbed = new EmbedBuilder()
-            .setColor(0xff0000)
-            .setTitle("Error")
-            .setDescription(
-              "<:Error:1225166842255904888> Either this player has not played the game yet, or they have requested to keep their profile hidden",
-            );
-        } else {
-          statsEmbed = new EmbedBuilder()
-            .setColor(0xff0000)
-            .setTitle("Error")
-            .setDescription("<:Error:1225166842255904888> `Status error: " + error.response.status + "`");
-        }
-        playerData = `error`;
-      }
+      playerData = response.data;
 
-      if (imageUrl !== "") {
-        if (playerData !== `error` && playerData !== `hidden`) {
-          console.log(`Returning stats info`);
-          const level = getLevel(playerData.Resources.XP);
+      headers = {
+        "x-api-key": `${settingsApiKey}`,
+      };
 
-          let statisticsString = Object.keys(playerData.Statistics)
-            .sort()
-            .map((key) => `**${key}:** ${playerData.Statistics[key]}`)
-            .join("\n");
+      params = {
+        datastoreName: "PlayerSettingsData",
+        entryKey: userId,
+      };
 
-          let permUpgradesEquippedString =
-            playerData.PermUpgrades.Equipped.sort()
-              .map((value) => `- ${value}`)
-              .join("\n");
+      response = await axios.get(
+        `https://apis.roblox.com/datastores/v1/universes/${experienceId}/standard-datastores/datastore/entries/entry`,
+        { headers, params },
+      );
 
-          let permUpgradesUnequippedString =
-            playerData.PermUpgrades.Unequipped.sort()
-              .map((value) => `- ${value}`)
-              .join("\n");
-
-          statsEmbed = new EmbedBuilder()
-            .setColor(0xd5733d)
-            .setTitle(`${username}'s Stats`)
-            .setDescription(`Stats of ${username}'s profile in-game`)
-            .addFields(
-              {
-                name: "Resources:",
-                value: `>>> **Level:** ${level} *(${playerData.Resources.XP} xp)*\n**Dabloons:** ${playerData.Resources.Dabloons}\n**Keys:** ${playerData.Resources.Keys}\n`,
-                inline: false,
-              },
-              {
-                name: "Customizations:",
-                value: `>>> **Equipped:**\n${permUpgradesEquippedString}\n**Unequipped:**\n${permUpgradesUnequippedString}`,
-                inline: false,
-              },
-              {
-                name: "Statistics:",
-                value: `>>> ${statisticsString}`,
-                inline: false,
-              },
-            )
-            .setTimestamp()
-            .setFooter({ text: `Stats` })
-            .setThumbnail(imageUrl);
-        }
-      } else {
-        statsEmbed = new EmbedBuilder()
+      if (response.data.VisibleProfile === false) {
+        const statsEmbed = new EmbedBuilder()
           .setColor(0xff0000)
           .setTitle("Error")
-          .setDescription(`<:Error:1225166842255904888> Could not retrieve player profile`);
+          .setDescription(
+            "<:Error:1225166842255904888> Either this player has not played the game yet, or they have requested to keep their profile hidden",
+          );
+        await interaction.editReply({ embeds: [statsEmbed] });
+        console.log(`Player profile hidden`);
+        return;
       }
+    } catch (error) {
+      console.error(error);
+      if (error.response && error.response.status === 404) {
+        const statsEmbed = new EmbedBuilder()
+          .setColor(0xff0000)
+          .setTitle("Error")
+          .setDescription(
+            "<:Error:1225166842255904888> Either this player has not played the game yet, or they have requested to keep their profile hidden",
+          );
+        await interaction.editReply({ embeds: [statsEmbed] });
+        console.log(`Player profile hidden or not found`);
+        return;
+      }
+      const statsEmbed = new EmbedBuilder()
+        .setColor(0xff0000)
+        .setTitle("Error")
+        .setDescription("<:Error:1225166842255904888> `Status error: " + error.response.status + "`");
+      await interaction.editReply({ embeds: [statsEmbed] });
+      console.log(`Error getting player data`);
+      return;
     }
 
-    // Send the response
-    await interaction.editReply({ embeds: [statsEmbed] });
+    if (imageUrl !== "") {
+      if (playerData !== `error` && playerData !== `hidden`) {
+        console.log(`Returning stats info`);
+        const level = getLevel(playerData.Resources.XP);
 
-    console.log(`Success! "getstats" command request completed.`);
+        const statisticsString = Object.keys(playerData.Statistics)
+          .sort()
+          .map((key) => `**${key}:** ${playerData.Statistics[key]}`)
+          .join("\n");
+
+        const permUpgradesEquippedString =
+          playerData.PermUpgrades.Equipped.sort()
+            .map((value) => `- ${value}`)
+            .join("\n");
+
+        const permUpgradesUnequippedString =
+          playerData.PermUpgrades.Unequipped.sort()
+            .map((value) => `- ${value}`)
+            .join("\n");
+
+        const statsEmbed = new EmbedBuilder()
+          .setColor(0xd5733d)
+          .setTitle(`${displayName}'s Stats`)
+          .setDescription(`Stats of ${displayName}'s profile in-game`)
+          .addFields(
+            {
+              name: "Resources:",
+              value: `>>> **Level:** ${level} *(${playerData.Resources.XP} xp)*\n**Dabloons:** ${playerData.Resources.Dabloons}\n**Keys:** ${playerData.Resources.Keys}\n`,
+              inline: false,
+            },
+            {
+              name: "Customizations:",
+              value: `>>> **Equipped:**\n${permUpgradesEquippedString}\n**Unequipped:**\n${permUpgradesUnequippedString}`,
+              inline: false,
+            },
+            {
+              name: "Statistics:",
+              value: `>>> ${statisticsString}`,
+              inline: false,
+            },
+          )
+          .setTimestamp()
+          .setFooter({ text: `Stats` })
+          .setThumbnail(imageUrl);
+
+        await interaction.editReply({ embeds: [statsEmbed] });
+        console.log(`Success! "getstats" command request completed.`);
+      }
+    } else {
+      const statsEmbed = new EmbedBuilder()
+        .setColor(0xff0000)
+        .setTitle("Error")
+        .setDescription(`<:Error:1225166842255904888> Could not retrieve player profile`);
+      await interaction.editReply({ embeds: [statsEmbed] });
+      console.log(`Error: Could not retrieve player profile`);
+    }
   },
 };
