@@ -141,17 +141,18 @@ module.exports = {
       banEmbed = new EmbedBuilder()
         .setColor(0xff0000)
         .setTitle("Error")
-        .setDescription("`Status error: " + error.response.status + "`");
+        .setDescription("`Status error: " + error.response?.status + "`");
       banData = `error`;
     }
 
     if (banData !== `error`) {
       try {
         if (interaction.options.getSubcommand() === "timedban") {
-          reason = interaction.options.getString("reason");
-          days = interaction.options.getInteger("days");
-          hours = interaction.options.getInteger("hours");
-          minutes = interaction.options.getInteger("minutes");
+          const unixTime = Math.floor(Date.now() / 1000);
+          const reason = interaction.options.getString("reason");
+          const days = interaction.options.getInteger("days");
+          const hours = interaction.options.getInteger("hours");
+          const minutes = interaction.options.getInteger("minutes");
           console.log(
             `Banning player: ` +
               userId +
@@ -165,54 +166,54 @@ module.exports = {
               minutes +
               ` minutes`,
           );
-
-          const unixTime = Math.floor(Date.now() / 1000);
+        
           if (
             unixTime + days * 86400 + hours * 3600 + minutes * 60 - unixTime >
             30
           ) {
             const JSONValue = JSON.stringify({
-              Reason: reason,
-              BanTime: unixTime,
-              ExpireTime: unixTime + days * 86400 + hours * 3600 + minutes * 60,
+              BanMessage: reason,
+              ExtraData: [unixTime + days * 86400 + hours * 3600 + minutes * 60, interaction.user.username],
+              UnbanDate: unixTime + days * 86400 + hours * 3600 + minutes * 60,
+              IsBanned: true,
             });
-
+        
             const convert = crypto
               .createHash("md5")
               .update(JSONValue)
               .digest("base64");
-
-            headers = {
+        
+            const headers = {
               "x-api-key": `${banDataApiKey}`,
               "content-md5": `${convert}`,
               "content-type": "application/json",
             };
-
-            params = {
+        
+            const params = {
               datastoreName: "BanData",
               entryKey: userId,
             };
-
+        
             response = await axios.post(
               `https://apis.roblox.com/datastores/v1/universes/${experienceId}/standard-datastores/datastore/entries/entry`,
               JSONValue,
               { headers, params },
             );
-
+        
             const banDate = new Date(unixTime * 1000);
             const banDateString = banDate.toLocaleDateString("en-US", {
               year: "2-digit",
               month: "2-digit",
               day: "2-digit",
             });
-
-            topic = "KickPlayer";
-            message = [
+        
+            const topic = "KickPlayer";
+            const message = [
               username,
               `Banned on ${banDateString} for reason: ${reason}; Ban expires in ${days}d ${hours}h ${minutes}m 0s`,
             ];
-            messageString = JSON.stringify(message);
-
+            const messageString = JSON.stringify(message);
+        
             response = await axios.post(
               `https://apis.roblox.com/messaging-service/v1/universes/${experienceId}/topics/${topic}`,
               {
@@ -224,7 +225,7 @@ module.exports = {
                 },
               },
             );
-
+        
             banEmbed = new EmbedBuilder()
               .setColor(0x00ff00)
               .setTitle("Success")
@@ -246,17 +247,18 @@ module.exports = {
               .setTitle("Error")
               .setDescription("Choose a valid time");
           }
-        }
+        }        
         if (interaction.options.getSubcommand() === "permban") {
-          reason = interaction.options.getString("reason");
+          const reason = interaction.options.getString("reason");
 
           console.log(
             `Permanently banning player: ` + userId + ` with reason: ` + reason,
           );
+          const unixTime = Math.floor(Date.now() / 1000);
           const JSONValue = JSON.stringify({
-            Reason: reason,
-            BanTime: unixTime,
-            ExpireTime: -1,
+            BanMessage: reason,
+            ExtraData: [interaction.user.username],
+            IsBanned: true,
           });
 
           const convert = crypto
@@ -264,13 +266,13 @@ module.exports = {
             .update(JSONValue)
             .digest("base64");
 
-          headers = {
+          const headers = {
             "x-api-key": `${banDataApiKey}`,
             "content-md5": `${convert}`,
             "content-type": "application/json",
           };
 
-          params = {
+          const params = {
             datastoreName: "BanData",
             entryKey: userId,
           };
@@ -281,127 +283,180 @@ module.exports = {
             { headers, params },
           );
 
+          const topic = "KickPlayer";
+          const message = [
+            username,
+            `Permabanned for reason: ${reason}`,
+          ];
+          const messageString = JSON.stringify(message);
+
+          response = await axios.post(
+            `https://apis.roblox.com/messaging-service/v1/universes/${experienceId}/topics/${topic}`,
+            {
+              message: messageString,
+            },
+            {
+              headers: {
+                "x-api-key": `${devControlsApiKey}`,
+              },
+            },
+          );
+
           banEmbed = new EmbedBuilder()
             .setColor(0x00ff00)
             .setTitle("Success")
-            .setDescription(
-              `${username} (${userId}) has been permanently banned for the reason: ${reason}`,
-            );
+            .setDescription(`${username} (${userId}) has been permanently banned for the reason: ${reason}`);
           logEmbed = new EmbedBuilder()
             .setColor(0x00ff00)
-            .setTitle("Player banned")
-            .setDescription(
-              `${username} (${userId}) has been permanently banned for the reason: ${reason}`,
-            )
-            .setFooter({ text: `Banned by ${interaction.user.username}` });
+            .setTitle("Player permanently banned")
+            .setDescription(`${username} (${userId}) has been permanently banned for the reason: ${reason}`)
+            .setFooter({
+              text: `Executed by ${interaction.user.username} (${interaction.user.id})`,
+            });
         }
+
         if (interaction.options.getSubcommand() === "unban") {
-          reason = interaction.options.getString("reason");
+          const reason = interaction.options.getString("reason");
 
           console.log(
-            `Unbanning player: ` + userId + ` with the reason: ` + reason,
+            `Unbanning player: ` + userId + ` with reason: ` + reason,
           );
+          const JSONValue = JSON.stringify({
+            BanMessage: reason,
+            ExtraData: [interaction.user.username],
+            IsBanned: false,
+          });
 
-          headers = {
+          const convert = crypto
+            .createHash("md5")
+            .update(JSONValue)
+            .digest("base64");
+
+          const headers = {
             "x-api-key": `${banDataApiKey}`,
+            "content-md5": `${convert}`,
+            "content-type": "application/json",
           };
 
-          params = {
+          const params = {
             datastoreName: "BanData",
             entryKey: userId,
           };
 
-          response = await axios.get(
+          response = await axios.post(
             `https://apis.roblox.com/datastores/v1/universes/${experienceId}/standard-datastores/datastore/entries/entry`,
+            JSONValue,
             { headers, params },
           );
 
-          response = await axios.delete(
-            `https://apis.roblox.com/datastores/v1/universes/${experienceId}/standard-datastores/datastore/entries/entry`,
-            { headers, params },
+          const topic = "KickPlayer";
+          const message = [
+            username,
+            `Permabanned for reason: ${reason}`,
+          ];
+          const messageString = JSON.stringify(message);
+
+          response = await axios.post(
+            `https://apis.roblox.com/messaging-service/v1/universes/${experienceId}/topics/${topic}`,
+            {
+              message: messageString,
+            },
+            {
+              headers: {
+                "x-api-key": `${devControlsApiKey}`,
+              },
+            },
           );
 
           banEmbed = new EmbedBuilder()
             .setColor(0x00ff00)
             .setTitle("Success")
-            .setDescription(
-              `${username} (${userId}) has been unbanned for the reason: ${reason}`,
-            );
+            .setDescription(`${username} (${userId}) has been permanently banned for the reason: ${reason}`);
           logEmbed = new EmbedBuilder()
             .setColor(0x00ff00)
-            .setTitle("Player Unbanned")
-            .setDescription(
-              `${username} (${userId}) has been unbanned for the reason: ${reason}`,
-            );
+            .setTitle("Player permanently banned")
+            .setDescription(`${username} (${userId}) has been permanently banned for the reason: ${reason}`)
+            .setFooter({
+              text: `Executed by ${interaction.user.username} (${interaction.user.id})`,
+            });
         }
+
         if (interaction.options.getSubcommand() === "info") {
-          headers = {
+          const JSONValue = JSON.stringify({
+            BanMessage: reason,
+            ExtraData: [interaction.user.username],
+            IsBanned: false,
+          });
+
+          const convert = crypto
+            .createHash("md5")
+            .update(JSONValue)
+            .digest("base64");
+
+          const headers = {
             "x-api-key": `${banDataApiKey}`,
+            "content-md5": `${convert}`,
+            "content-type": "application/json",
           };
 
-          params = {
+          const params = {
             datastoreName: "BanData",
             entryKey: userId,
           };
 
-          response = await axios.get(
+          response = await axios.post(
             `https://apis.roblox.com/datastores/v1/universes/${experienceId}/standard-datastores/datastore/entries/entry`,
+            JSONValue,
             { headers, params },
           );
 
-          banData = response.data;
+          const topic = "KickPlayer";
+          const message = [
+            username,
+            `Permabanned for reason: ${reason}`,
+          ];
+          const messageString = JSON.stringify(message);
 
-          banTimeString = `<t:${Math.floor(banData.BanTime)}:F>`;
-          if (banData.ExpireTime === -1) {
-            expireTimeString = `Permanent Ban`;
-          } else {
-            expireTimeString = `<t:${Math.floor(banData.ExpireTime)}:F>`;
-          }
+          response = await axios.post(
+            `https://apis.roblox.com/messaging-service/v1/universes/${experienceId}/topics/${topic}`,
+            {
+              message: messageString,
+            },
+            {
+              headers: {
+                "x-api-key": `${devControlsApiKey}`,
+              },
+            },
+          );
 
           banEmbed = new EmbedBuilder()
             .setColor(0x00ff00)
-            .setTitle(`${username}'s Ban Data`)
-            .setDescription(`Current ban information for ${username}`)
-            .addFields(
-              {
-                name: "Reason",
-                value: banData.Reason,
-              },
-              {
-                name: "Ban Date",
-                value: banTimeString,
-              },
-              {
-                name: "Expire Date",
-                value: expireTimeString,
-              },
-            );
+            .setTitle("Success")
+            .setDescription(`${username} (${userId}) has been permanently banned for the reason: ${reason}`);
+          logEmbed = new EmbedBuilder()
+            .setColor(0x00ff00)
+            .setTitle("Player permanently banned")
+            .setDescription(`${username} (${userId}) has been permanently banned for the reason: ${reason}`)
+            .setFooter({
+              text: `Executed by ${interaction.user.username} (${interaction.user.id})`,
+            });
         }
       } catch (error) {
-        if (error.response.status === 404) {
-          banEmbed = new EmbedBuilder()
-            .setColor(0xff0000)
-            .setTitle("Error")
-            .setDescription("Player is not currently banned");
-        } else {
-          console.error(error);
-          banEmbed = new EmbedBuilder()
-            .setColor(0xff0000)
-            .setTitle("Error")
-            .setDescription("`Status error: " + error.response.status + "`");
-        }
+        console.error(error);
+        banEmbed = new EmbedBuilder()
+          .setColor(0xff0000)
+          .setTitle("Error")
+          .setDescription("`Status error: " + error.response?.status + "`");
       }
     }
 
-    // Send the response
-    await interaction.editReply({ embeds: [banEmbed] });
+    await interaction.editReply({
+      embeds: [banEmbed],
+    });
 
-    // Send log message
-    if (logEmbed) {
-      const logChannel = client.channels.cache.get(logChannelId);
-      logChannel.send({ embeds: [logEmbed] });
+    if (logChannelId && logEmbed) {
+      const channel = await client.channels.fetch(logChannelId);
+      channel.send({ embeds: [logEmbed] });
     }
-
-    console.log(`Success! "bans" command request completed.`);
   },
 };
