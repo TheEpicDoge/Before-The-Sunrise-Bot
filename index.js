@@ -54,26 +54,21 @@ client.once("ready", async () => {
     });
     console.log("Successfully reloaded application commands!");
     const devControlsCommand = require("./commands/dev/devcontrols.js");
-    const bansCommand = require("./commands/dev/bans.js");
     const playerDataCommand = require("./commands/dev/playerdata.js");
     console.log(`Started refreshing dev commands for guild: ${mainGuildId}.`);
     await rest.put(Routes.applicationGuildCommands(clientId, mainGuildId), {
       body: [
         devControlsCommand.data.toJSON(),
-        bansCommand.data.toJSON(),
         playerDataCommand.data.toJSON(),
       ],
     });
     client.commands.set(devControlsCommand.data.name, devControlsCommand);
     console.log(`Registered command: ${devControlsCommand.data.name}`);
-    client.commands.set(bansCommand.data.name, bansCommand);
-    console.log(`Registered command: ${bansCommand.data.name}`);
     client.commands.set(playerDataCommand.data.name, playerDataCommand);
     console.log(`Registered command: ${playerDataCommand.data.name}`);
     console.log(
       `Successfully reloaded dev commands for guild: ${mainGuildId}!`,
     );
-
 
   console.log("Starting tasks");
   console.log("Successfully started tasks!");
